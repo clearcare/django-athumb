@@ -153,7 +153,7 @@ class S3BotoStorage(Storage):
         name = self._clean_name(name)
         return S3BotoStorageFile(name, mode, self)
 
-    def _save(self, name, content, max_length==None):
+    def _save(self, name, content, max_length=None):
         name = self._clean_name(name)
 
         if callable(self.headers):
