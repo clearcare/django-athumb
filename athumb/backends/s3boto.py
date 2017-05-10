@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 """
 Incorporated from django-storages, copyright all of those listed in:
 http://code.welldev.org/django-storages/src/tip/AUTHORS
