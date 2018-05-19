@@ -22,20 +22,13 @@ try:
     from boto.s3.connection import S3Connection
     from boto.exception import S3ResponseError
     from boto.s3.key import Key
+    import boto.ec2
 except ImportError:
     raise ImproperlyConfigured(
         "Could not load boto's S3 bindings. Please install boto."
     )
 
-AWS_REGIONS = [
-    'eu-west-1',
-    'us-east-1',
-    'us-west-1',
-    'us-west-2',
-    'sa-east-1',
-    'ap-northeast-1',
-    'ap-southeast-1',
-]
+AWS_REGIONS = [r.name for r in boto.ec2.regions()]
 
 REGION_RE = re.compile(r's3-(.+).amazonaws.com')
 
