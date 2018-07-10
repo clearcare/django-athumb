@@ -12,7 +12,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from athumb.exceptions import UploadedImageIsUnreadableError
-from pial.engines.pil_engine import PILEngine
+from athumb.pial.engines.pil_engine import PILEngine
 
 from validators import ImageUploadExtensionValidator
 
@@ -24,7 +24,6 @@ except ImportError:
     # Not using South, no big deal.
     pass
 
-# TODO: Make this configurable.
 # Thumbnailing is done through here. Eventually we can support image libraries
 # other than PIL.
 THUMBNAIL_ENGINE = PILEngine()
@@ -77,6 +76,9 @@ class ImageWithThumbsFieldFile(ImageFieldFile):
         new_url = "%s/%s" % (url_minus_filename,
                                       os.path.basename(new_filename))
 
+        # Cache busters are a cheezy way to force some browsers to retrieve
+        # an updated image, circumventing any long-term or infinite caching
+        # you may have set when uploading to S3. This are entirely optional.
         if cache_bust and MEDIA_CACHE_BUSTER:
             new_url = "%s?cbust=%s" % (new_url, MEDIA_CACHE_BUSTER)
 
@@ -213,16 +215,28 @@ class ImageWithThumbsField(ImageField):
     Note: The 'thumbs' attribute is not required. If you don't provide it, 
     ImageWithThumbsField will act as a normal ImageField
     """
+
     attr_class = ImageWithThumbsFieldFile
+    default_validators = [IMAGE_EXTENSION_VALIDATOR]
 
     def __init__(self, *args, **kwargs):
         self.thumbs = kwargs.pop('thumbs', ())
         self.thumbnail_format = kwargs.pop('thumbnail_format', None)
 
-        if not kwargs.has_key('validators'):
-            kwargs['validators'] = [IMAGE_EXTENSION_VALIDATOR]
-
-        if not kwargs.has_key('max_length'):
+        if 'max_length' not in kwargs:
             kwargs['max_length'] = 255
 
         super(ImageWithThumbsField, self).__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super(ImageWithThumbsField, self).deconstruct()
+        # Only include kwarg if it's not the default
+        if self.thumbs:
+            kwargs['thumbs'] = self.thumbs
+        if self.thumbnail_format:
+            kwargs['thumbnail_format'] = self.thumbnail_format
+        if self.validators == [IMAGE_EXTENSION_VALIDATOR] and 'validators' in kwargs:
+            del kwargs['validators']
+        if 'storage' in kwargs:
+            del kwargs['storage']
+        return name, path, args, kwargs
